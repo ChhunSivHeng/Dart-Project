@@ -4,7 +4,7 @@ part 'person.dart';
 part 'doctor.dart';
 part 'patient.dart';
 
-enum AppointmentStatus { scheduled, completed, canceled }
+enum AppointmentStatus { scheduled, pending, completed, canceled }
 
 class Department {
   final int id;
@@ -17,6 +17,8 @@ class Department {
   void addDoctor(Doctor doctor) {
     if (!doctors.contains(doctor)) {
       doctors.add(doctor);
+      // ensure doctor's department points to this department
+      doctor.department = this;
     }
   }
 }

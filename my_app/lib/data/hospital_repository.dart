@@ -6,38 +6,81 @@ class HospitalRepository {
   final List<Patient> patients = [];
   final List<Appointment> appointments = [];
 
-  void addDepartment(Department department) => departments.add(department);
-  void addDoctor(Doctor doctor) {
-    doctors.add(doctor);
-    doctor.department.addDoctor(doctor);
+  // Departments
+  void addDepartment(Department d) {
+    // replace existing by id or add
+    final exist = findDepartmentById(d.id);
+    if (exist == null) {
+      departments.add(d);
+    } else {
+      exist.name = d.name;
+    }
   }
+  Department? findDepartmentById(int id) {
+    for (var d in departments) {
+      if (d.id == id) return d;
+    }
+    return null;
+  }
+  List<Department> getAllDepartments() => departments;
 
-  void addPatient(Patient patient) => patients.add(patient);
-  void addAppointment(Appointment appointment) => appointments.add(appointment);
-
-  Department? getDepartmentByIndex(int index) =>
-      (index >= 0 && index < departments.length) ? departments[index] : null;
-  Doctor? getDoctorByIndex(int index) =>
-      (index >= 0 && index < doctors.length) ? doctors[index] : null;
-  Patient? getPatientByIndex(int index) =>
-      (index >= 0 && index < patients.length) ? patients[index] : null;
-
+  // Doctors
+  void addDoctor(Doctor d) {
+    doctors.add(d);
+    if (!d.department.doctors.contains(d)) {
+      d.department.addDoctor(d);
+    }
+  }
   Doctor? findDoctorById(int id) {
-    try {
-      return doctors.firstWhere((d) => d.id == id);
-    } catch (_) {
-      return null;
+    for (var d in doctors) {
+      if (d.id == id) return d;
+    }
+    return null;
+  }
+  List<Doctor> getAllDoctors() => doctors;
+  List<Doctor> getDoctorsByDepartmentId(int deptId) =>
+      doctors.where((doc) => doc.department.id == deptId).toList();
+
+  // Patients
+  void addPatient(Patient p) {
+    final exist = findPatientById(p.id);
+    if (exist == null) {
+      patients.add(p);
+    } else {
+      // update basic info
+      exist.name = p.name;
+      exist.gender = p.gender;
+      exist.age = p.age;
     }
   }
-
   Patient? findPatientById(int id) {
-    try {
-      return patients.firstWhere((p) => p.id == id);
-    } catch (_) {
-      return null;
+    for (var p in patients) {
+      if (p.id == id) return p;
     }
+    return null;
+  }
+  List<Patient> getAllPatients() => patients;
+
+  // Appointments
+  void addAppointment(Appointment a) {
+    appointments.add(a);
+  }
+  List<Appointment> getAppointmentsForDoctor(Doctor d) =>
+      appointments.where((a) => a.doctor == d).toList();
+
+  void confirmAppointment(Appointment a) {
+    a.status = AppointmentStatus.pending;
   }
 
+  void completeAppointment(Appointment a) {
+    a.complete();
+  }
+
+  void cancelAppointment(Appointment a) {
+    a.cancel();
+  }
+
+  // Counts
   int get departmentCount => departments.length;
   int get doctorCount => doctors.length;
   int get patientCount => patients.length;

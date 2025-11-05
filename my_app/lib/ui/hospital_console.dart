@@ -2,326 +2,248 @@ import 'dart:io';
 import '../domain/hospital.dart';
 import '../data/hospital_repository.dart';
 
+DateTime? _parseFlexibleDate(String input) {
+  final s = input.trim();
+  if (s.isEmpty) return null;
+
+  // Try common ISO-like "YYYY-MM-DD[ HH:MM]" allowing single-digit month/day
+  final isoReg = RegExp(r'^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?$');
+  final mIso = isoReg.firstMatch(s);
+  if (mIso != null) {
+    final y = int.parse(mIso.group(1)!);
+    final mo = int.parse(mIso.group(2)!);
+    final d = int.parse(mIso.group(3)!);
+    final hh = mIso.group(4) != null ? int.parse(mIso.group(4)!) : 0;
+    final mm = mIso.group(5) != null ? int.parse(mIso.group(5)!) : 0;
+    try {
+      return DateTime(y, mo, d, hh, mm);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Try US format "MM/DD/YY" or "MM/DD/YYYY" with optional time " HH:MM"
+  final usReg = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{2,4})(?:[ T](\d{1,2}):(\d{2}))?$');
+  final mUs = usReg.firstMatch(s);
+  if (mUs != null) {
+    var mo = int.parse(mUs.group(1)!);
+    var d = int.parse(mUs.group(2)!);
+    var y = int.parse(mUs.group(3)!);
+    if (y < 100) y += 2000; // '25' -> 2025
+    final hh = mUs.group(4) != null ? int.parse(mUs.group(4)!) : 0;
+    final mm = mUs.group(5) != null ? int.parse(mUs.group(5)!) : 0;
+    try {
+      return DateTime(y, mo, d, hh, mm);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Last attempt: try DateTime.parse with 'T' replacement (strict)
+  try {
+    return DateTime.parse(s.replaceFirst(' ', 'T'));
+  } catch (_) {
+    return null;
+  }
+}
+
+DateTime _readDatePrompt(String prompt) {
+  while (true) {
+    stdout.write(prompt);
+    final input = stdin.readLineSync() ?? '';
+    final parsed = _parseFlexibleDate(input);
+    if (parsed != null) return parsed;
+    print('Invalid date format.');
+    print('Accepted formats: "YYYY-MM-DD HH:MM" (e.g. 2025-11-05 12:34) or "MM/DD/YY" (e.g. 11/05/25). Please re-enter.');
+  }
+}
+
 void runConsoleUI() {
   final repo = HospitalRepository();
 
-  repo.addDepartment(Department(id: 1, name: 'Pediatrics'));
-  repo.addDepartment(Department(id: 2, name: 'Cardiology'));
-  repo.addDepartment(Department(id: 3, name: 'Neurology'));
-
-  repo.addDoctor(
-    Doctor(
-      name: 'Dr. Heng',
-      id: 1,
-      gender: 'M',
-      age: 40,
-      specialization: 'Cardiology',
-      department: repo.departments[1],
-    ),
-  );
-  repo.addDoctor(
-    Doctor(
-      name: 'Dr. Chan',
-      id: 2,
-      gender: 'M',
-      age: 38,
-      specialization: 'Neurology',
-      department: repo.departments[2],
-    ),
-  );
+  // minimal bootstrap so user can test quickly
+  final defaultDept = Department(id: 1, name: 'General');
+  repo.addDepartment(defaultDept);
 
   while (true) {
-    stdout.write('\x1B[2J\x1B[0;0H');
-    print('\n==========================================');
-    print('     PATIENT MANAGEMENT SYSTEM (TERMINAL)');
-    print('==========================================');
-    print('\nMAIN MENU');
-    print('------------------------------------------');
-    print('1. Admin Login');
-    print('2. Doctor Login');
-    print('3. Patient Login');
-    print('4. Exit');
-    print('------------------------------------------');
-    stdout.write('Enter your choice: ');
-    final input = stdin.readLineSync();
+    print('\n====== HOSPITAL APPOINTMENT SYSTEM ======');
+    print('\n1. Add Doctor to Department');
+    print('2. Patient Book Appointment');
+    print('3. Doctor View / Confirm Appointment');
+    print('4. Complete or Update Appointment Status');
+    print('5. Exit');
+    stdout.write('----------------------------------------\nSelect option: ');
+    final option = (stdin.readLineSync() ?? '').trim();
 
-    if (input == '1') {
-      adminMenu(repo);
-    } else if (input == '2') {
-      doctorMenu(repo);
-    } else if (input == '3') {
-      patientMenu(repo);
-    } else if (input == '4') {
-      break;
-    }
-  }
-}
-
-void adminMenu(HospitalRepository repo) {
-  while (true) {
-    stdout.write('\x1B[2J\x1B[0;0H');
-    print('\n==========================================');
-    print('ADMIN MENU');
-    print('==========================================');
-    print('1. View Departments');
-    print('2. Add Department');
-    print('3. Add Doctor to Department');
-    print('4. View All Doctors');
-    print('5. View System Summary');
-    print('6. Back to Main Menu');
-    print('------------------------------------------');
-    stdout.write('Enter your choice: ');
-    final input = stdin.readLineSync();
-
-    if (input == '1') {
-      print('\nDepartments:');
-      for (var i = 0; i < repo.departments.length; i++) {
-        print('${i + 1}. ${repo.departments[i].name}');
-      }
-    } else if (input == '2') {
+    if (option == '1') {
+      print('\n=== ADD DOCTOR TO DEPARTMENT ===');
+      stdout.write('Enter Department ID: ');
+      final depId = int.tryParse(stdin.readLineSync() ?? '') ?? 0;
       stdout.write('Enter Department Name: ');
-      final name = stdin.readLineSync() ?? '';
-      final dep = Department(id: repo.departments.length + 1, name: name);
-      repo.addDepartment(dep);
-      print('Department added!');
-    } else if (input == '3') {
+      final depName = stdin.readLineSync() ?? '';
+
+      var dept = repo.findDepartmentById(depId);
+      if (dept == null) {
+        dept = Department(id: depId, name: depName);
+        repo.addDepartment(dept);
+      } else {
+        dept.name = depName.isNotEmpty ? depName : dept.name;
+      }
+
       stdout.write('Enter Doctor Name: ');
-      final name = stdin.readLineSync() ?? '';
+      final docName = stdin.readLineSync() ?? '';
+      stdout.write('Enter Doctor ID: ');
+      final docId = int.tryParse(stdin.readLineSync() ?? '') ?? 0;
       stdout.write('Enter Specialization: ');
       final spec = stdin.readLineSync() ?? '';
-      print('Select Department:');
-      for (var i = 0; i < repo.departments.length; i++) {
-        print('${i + 1}. ${repo.departments[i].name}');
-      }
-      final depIdx = int.tryParse(stdin.readLineSync() ?? '') ?? 1;
-      final dep = repo.getDepartmentByIndex(depIdx - 1);
-      if (dep == null) {
-        print('Invalid department.');
-        continue;
-      }
+
       final doc = Doctor(
-        name: name,
-        id: repo.doctors.length + 1,
+        name: docName,
+        id: docId,
         gender: 'N/A',
         age: 0,
         specialization: spec,
-        department: dep,
+        department: dept,
       );
       repo.addDoctor(doc);
-      print('Doctor added successfully to ${dep.name} Department!');
-    } else if (input == '4') {
-      print('\nAll Doctors:');
-      for (var d in repo.doctors) {
-        print('${d.name} (${d.specialization}) - Dept: ${d.department.name}');
-      }
-    } else if (input == '5') {
-      print('\n------------------------------------------');
-      print('Departments: ${repo.departmentCount}');
-      print('Doctors: ${repo.doctorCount}');
-      print('Patients: ${repo.patientCount}');
-      print('Appointments: ${repo.appointmentCount}');
-      print('------------------------------------------');
-      print('[Upcoming Appointments]');
-      for (var a in repo.appointments.where(
-        (a) => a.status == AppointmentStatus.scheduled,
-      )) {
-        print(
-          '- ${a.date.toLocal()} | ${a.doctor.name} → ${a.patient.name} (${a.status.name})',
-        );
-      }
-      print('------------------------------------------');
-      stdout.write('Press Enter to return...');
-      stdin.readLineSync();
-    } else if (input == '6') {
-      break;
-    }
-  }
-}
+      print('\nDoctor added successfully to department "${dept.name}"!');
+    } else if (option == '2') {
+      print('\n=== BOOK APPOINTMENT ===');
+      stdout.write('Enter Patient Name: ');
+      final pName = stdin.readLineSync() ?? '';
+      stdout.write('Enter Patient ID: ');
+      final pId = int.tryParse(stdin.readLineSync() ?? '') ?? 0;
+      stdout.write('Enter Gender: ');
+      final gender = stdin.readLineSync() ?? '';
+      stdout.write('Enter Age: ');
+      final age = int.tryParse(stdin.readLineSync() ?? '') ?? 0;
 
-void doctorMenu(HospitalRepository repo) {
-  stdout.write('\x1B[2J\x1B[0;0H');
-  print('\nEnter Doctor ID: ');
-  final did = int.tryParse(stdin.readLineSync() ?? '') ?? 0;
-  final doctor = repo.findDoctorById(did);
-  if (doctor == null) {
-    print('Doctor not found.');
-    return;
-  }
-  while (true) {
-    stdout.write('\x1B[2J\x1B[0;0H');
-    print('\n==========================================');
-    print('DOCTOR MENU');
-    print('==========================================');
-    print('1. View My Appointments');
-    print('2. Complete Appointment');
-    print('3. Check My Availability');
-    print('4. Update Appointment Status');
-    print('5. Back to Main Menu');
-    print('------------------------------------------');
-    stdout.write('Enter your choice: ');
-    final input = stdin.readLineSync();
+      final patient = Patient(name: pName, id: pId, gender: gender, age: age);
+      repo.addPatient(patient);
 
-    if (input == '1') {
-      print('Your Appointments:');
-      for (var i = 0; i < doctor.appointments.length; i++) {
-        final a = doctor.appointments[i];
-        print(
-          '${i + 1}. Patient: ${a.patient.name} | Date: ${a.date} | Status: ${a.status.name}',
-        );
-      }
-    } else if (input == '2') {
-      print('Select appointment index to complete: ');
-      for (var i = 0; i < doctor.appointments.length; i++) {
-        final a = doctor.appointments[i];
-        print(
-          '${i + 1}. Patient: ${a.patient.name} | Date: ${a.date} | Status: ${a.status.name}',
-        );
-      }
-      final idx = int.tryParse(stdin.readLineSync() ?? '') ?? 0;
-      if (idx < 1 || idx > doctor.appointments.length) {
-        print('Invalid index.');
-        continue;
-      }
-      doctor.appointments[idx - 1].complete();
-      print(' Appointment marked as COMPLETED.');
-    } else if (input == '3') {
-      stdout.write('Enter date (YYYY-MM-DD HH:MM): ');
-      final dateStr = stdin.readLineSync() ?? '';
-      DateTime? date;
-      try {
-        date = DateTime.parse(dateStr.replaceFirst(' ', 'T'));
-      } catch (_) {
-        print('Invalid date format.');
-        continue;
-      }
-      if (doctor.isAvailable(date)) {
-        print(' Available.');
-      } else {
-        print(' Not available — Appointment already scheduled.');
-      }
-    } else if (input == '4') {
-      print('Select appointment index to update: ');
-      for (var i = 0; i < doctor.appointments.length; i++) {
-        final a = doctor.appointments[i];
-        print(
-          '${i + 1}. Patient: ${a.patient.name} | Date: ${a.date} | Status: ${a.status.name}',
-        );
-      }
-      final idx = int.tryParse(stdin.readLineSync() ?? '') ?? 0;
-      if (idx < 1 || idx > doctor.appointments.length) {
-        print('Invalid index.');
-        continue;
-      }
-      print('Select new status:\n1. Scheduled\n2. Completed\n3. Canceled');
-      final statusIdx = int.tryParse(stdin.readLineSync() ?? '') ?? 1;
-      final appointment = doctor.appointments[idx - 1];
-      if (statusIdx == 1) {
-        appointment.schedule();
-      } else if (statusIdx == 2) {
-        appointment.complete();
-      } else if (statusIdx == 3) {
-        appointment.cancel();
-      }
-      print('Appointment status updated successfully!');
-    } else if (input == '5') {
-      break;
-    }
-  }
-}
-
-void patientMenu(HospitalRepository repo) {
-  stdout.write('\x1B[2J\x1B[0;0H');
-  print('\nEnter Patient ID: ');
-  final pid = int.tryParse(stdin.readLineSync() ?? '') ?? 0;
-  var patient = repo.findPatientById(pid);
-  if (patient == null) {
-    print('Patient not found. Registering new patient...');
-    stdout.write('Enter patient name: ');
-    final name = stdin.readLineSync() ?? '';
-    stdout.write('Enter gender: ');
-    final gender = stdin.readLineSync() ?? '';
-    stdout.write('Enter age: ');
-    final age = int.tryParse(stdin.readLineSync() ?? '') ?? 0;
-    patient = Patient(name: name, id: pid, gender: gender, age: age);
-    repo.addPatient(patient);
-    print('Patient registered.');
-  }
-  while (true) {
-    stdout.write('\x1B[2J\x1B[0;0H'); // ai generate on clear screen finction
-    print('\n==========================================');
-    print('PATIENT MENU');
-    print('==========================================');
-    print('1. View Available Doctors');
-    print('2. Book Appointment');
-    print('3. Cancel Appointment');
-    print('4. View My Appointments');
-    print('5. Back to Main Menu');
-    print('------------------------------------------');
-    stdout.write('Enter your choice: ');
-    final input = stdin.readLineSync();
-
-    if (input == '1') {
-      print('Available Doctors:');
-      for (var i = 0; i < repo.doctors.length; i++) {
-        print(
-          '${i + 1}. ${repo.doctors[i].name} (${repo.doctors[i].specialization})',
-        );
-      }
-    } else if (input == '2') {
-      print('Select Doctor Index:');
-      for (var i = 0; i < repo.doctors.length; i++) {
-        print(
-          '${i + 1}. ${repo.doctors[i].name} (${repo.doctors[i].specialization})',
-        );
-      }
-      final didx = int.tryParse(stdin.readLineSync() ?? '') ?? 1;
-      final doctor = repo.getDoctorByIndex(didx - 1);
+      stdout.write('\nEnter Doctor ID to book: ');
+      final did = int.tryParse(stdin.readLineSync() ?? '') ?? 0;
+      final doctor = repo.findDoctorById(did);
       if (doctor == null) {
-        print('Invalid doctor index.');
+        print('Doctor not found.');
         continue;
       }
-      stdout.write('Enter Date (YYYY-MM-DD HH:MM): ');
-      final dateStr = stdin.readLineSync() ?? '';
-      DateTime? date;
-      try {
-        date = DateTime.parse(dateStr.replaceFirst(' ', 'T'));
-      } catch (_) {
-        print('Invalid date format.');
-        continue;
-      }
+
+      final date = _readDatePrompt('Enter Appointment Date (YYYY-MM-DD HH:MM or MM/DD/YY): ');
+
+      print('\nChecking ${doctor.name} availability...');
       if (!doctor.isAvailable(date)) {
-        print(' Not available — Appointment already scheduled.');
+        print('❌ Doctor ${doctor.name} already has an appointment at that time.');
         continue;
       }
-      patient.bookAppointment(doctor, date);
-      repo.addAppointment(patient.appointments.last);
-      print(' Appointment booked successfully! (Status: Scheduled)');
-    } else if (input == '3') {
-      print('My Appointments:');
-      for (var i = 0; i < patient.appointments.length; i++) {
-        final a = patient.appointments[i];
-        print(
-          '${i + 1}. Dr. ${a.doctor.name} | ${a.date} | Status: ${a.status.name}',
-        );
+      print('✅ Doctor is available.\n\nBooking appointment...');
+      final appt = Appointment(
+        date: date,
+        status: AppointmentStatus.scheduled,
+        doctor: doctor,
+        patient: patient,
+      );
+      doctor.appointments.add(appt);
+      patient.appointments.add(appt);
+      repo.addAppointment(appt);
+
+      print('Appointment created successfully!\n');
+      print('Appointment ID: ${appt.id}');
+      print('Doctor: ${doctor.name}');
+      print('Patient: ${patient.name}');
+      print('Date: ${date.toString().split('.').first}');
+      print('Status: ${appt.status.name.toUpperCase()}');
+    } else if (option == '3') {
+      print('\n=== DOCTOR VIEW APPOINTMENTS ===');
+      stdout.write('Enter Doctor ID: ');
+      final did = int.tryParse(stdin.readLineSync() ?? '') ?? 0;
+      final doctor = repo.findDoctorById(did);
+      if (doctor == null) {
+        print('Doctor not found.');
+        continue;
       }
-      stdout.write('Select Appointment to Cancel: ');
+      print('Doctor: ${doctor.name} (ID: ${doctor.id})');
+      print('----------------------------------------');
+      final list = repo.getAppointmentsForDoctor(doctor);
+      if (list.isEmpty) {
+        print('No appointments.');
+        continue;
+      }
+      for (var i = 0; i < list.length; i++) {
+        final a = list[i];
+        print('[${i + 1}] Appointment ID: ${a.id}');
+        print('    Patient: ${a.patient.name}');
+        print('    Date: ${a.date.toString().split('.').first}');
+        print('    Status: ${a.status.name.toUpperCase()}\n');
+      }
+      stdout.write('Do you want to confirm any appointment? (Enter index or 0 to skip): ');
       final idx = int.tryParse(stdin.readLineSync() ?? '') ?? 0;
-      if (idx < 1 || idx > patient.appointments.length) {
-        print('Invalid index.');
+      if (idx > 0 && idx <= list.length) {
+        final sel = list[idx - 1];
+        repo.confirmAppointment(sel);
+        print('Appointment confirmed.');
+        print('Status updated to: ${sel.status.name.toUpperCase()}');
+      }
+    } else if (option == '4') {
+      print('\n=== UPDATE / COMPLETE APPOINTMENT ===');
+      stdout.write('Doctor ID: ');
+      final did = int.tryParse(stdin.readLineSync() ?? '') ?? 0;
+      final doctor = repo.findDoctorById(did);
+      if (doctor == null) {
+        print('Doctor not found.');
         continue;
       }
-      patient.cancelAppointment(patient.appointments[idx - 1]);
-      print(' Appointment canceled successfully!');
-    } else if (input == '4') {
-      print('My Appointments:');
-      for (var i = 0; i < patient.appointments.length; i++) {
-        final a = patient.appointments[i];
-        print(
-          '${i + 1}. Dr. ${a.doctor.name} | ${a.date} | Status: ${a.status.name}',
-        );
+      final list = repo.getAppointmentsForDoctor(doctor);
+      if (list.isEmpty) {
+        print('No appointments.');
+        continue;
       }
-    } else if (input == '5') {
+      print('Doctor: ${doctor.name}');
+      print('----------------------------------------');
+      for (var i = 0; i < list.length; i++) {
+        final a = list[i];
+        print('[${i + 1}] Appointment ID: ${a.id}');
+        print('    Patient: ${a.patient.name}');
+        print('    Date: ${a.date.toString().split('.').first}');
+        print('    Status: ${a.status.name.toUpperCase()}\n');
+      }
+      stdout.write('Select appointment index to update: ');
+      final selIdx = int.tryParse(stdin.readLineSync() ?? '') ?? 0;
+      if (selIdx < 1 || selIdx > list.length) {
+        print('Invalid selection.');
+        continue;
+      }
+      final ap = list[selIdx - 1];
+      stdout.write('Has the appointment ended? (Y/N): ');
+      final ended = (stdin.readLineSync() ?? '').trim().toUpperCase();
+      if (ended == 'Y') {
+        repo.completeAppointment(ap);
+        print('✅ Appointment marked as COMPLETED!');
+      } else {
+        stdout.write('Enter new status (S = SCHEDULED, P = PENDING, C = CANCELED): ');
+        final st = (stdin.readLineSync() ?? '').trim().toUpperCase();
+        if (st == 'S') {
+          ap.status = AppointmentStatus.scheduled;
+        } else if (st == 'P') {
+          ap.status = AppointmentStatus.pending;
+        } else if (st == 'C') {
+          repo.cancelAppointment(ap);
+        }
+        print('Status updated to: ${ap.status.name.toUpperCase()}');
+      }
+
+      print('\nCurrent Appointment Summary:');
+      print('Appointment ID: ${ap.id}');
+      print('Doctor: ${ap.doctor.name}');
+      print('Patient: ${ap.patient.name}');
+      print('Date: ${ap.date.toString().split('.').first}');
+      print('Status: ${ap.status.name.toUpperCase()}');
+    } else if (option == '5') {
+      print('Exiting system...\nThank you for using the Hospital Appointment System!');
       break;
+    } else {
+      print('Invalid option.');
     }
+    print('----------------------------------------\n');
   }
 }

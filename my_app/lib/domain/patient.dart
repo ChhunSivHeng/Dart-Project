@@ -10,17 +10,18 @@ class Patient extends Person {
     required int age,
   }) : super(name: name, id: id, gender: gender, age: age);
 
-  void bookAppointment(Doctor doctor, DateTime date) {
-    if (doctor.isAvailable(date)) {
-      final appointment = Appointment(
-        date: date,
-        status: AppointmentStatus.scheduled,
-        doctor: doctor,
-        patient: this,
-      );
-      appointments.add(appointment);
-      doctor.appointments.add(appointment);
-    }
+  bool bookAppointment(Doctor doctor, DateTime date) {
+    if (!doctor.isAvailable(date)) return false;
+
+    final appointment = Appointment(
+      date: date,
+      status: AppointmentStatus.scheduled,
+      doctor: doctor,
+      patient: this,
+    );
+    appointments.add(appointment);
+    doctor.appointments.add(appointment);
+    return true;
   }
 
   void cancelAppointment(Appointment appointment) {
