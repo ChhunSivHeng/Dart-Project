@@ -7,6 +7,7 @@ Future<void> main() async {
   const snapshot = 'hospital_snapshot.json';
   final repo = await HospitalRepository.loadFromFile(snapshot);
 
+  // Bootstraps Department + Doctor if repo empty, then runHospitalConsole(repo)
   if (repo.doctorCount == 0 &&
       repo.patientCount == 0 &&
       repo.departmentCount == 0) {
@@ -18,10 +19,11 @@ Future<void> main() async {
       id: 101,
       gender: 'M',
       age: 20,
-      specialization: 'Phycology',
+      specialization: 'Adults',
       department: cardiology,
     );
     repo.addDoctor(drHeng);
+
     await repo.saveToFile(snapshot);
   }
 

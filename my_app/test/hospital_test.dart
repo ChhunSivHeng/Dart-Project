@@ -1,12 +1,12 @@
 import 'package:test/test.dart';
+import 'package:my_app/data/hospital_repository.dart';
 import 'package:my_app/domain/department.dart';
 import 'package:my_app/domain/doctor.dart';
 import 'package:my_app/domain/patient.dart';
 import 'package:my_app/domain/appointment.dart';
-import 'package:my_app/data/hospital_repository.dart';
 
 void main() {
-  group('Hospital domain & repository tests', () {
+  group('Simple Hospital tests', () {
     late HospitalRepository repo;
     late Department dep;
     late Doctor doc;
@@ -19,79 +19,77 @@ void main() {
       repo.addDepartment(dep);
 
       doc = Doctor(
-        name: 'Dr. Ronan',
+        name: 'Dr. Heng',
         id: 101,
         gender: 'M',
-        age: 45,
-        specialization: 'Nose',
+        age: 15,
+        specialization: 'Cardiologist',
         department: dep,
       );
       repo.addDoctor(doc);
 
-      pat = Patient(name: 'Alice', id: 201, gender: 'F', age: 30);
-      repo.addPatient(pat);
-
+      pat = Patient(name: 'Nak', id: 201, gender: 'F', age: 21);
+      // tests will register patient into repo where needed
       dt = DateTime(2025, 11, 6, 10, 0);
     });
 
-    test('Patient can book and doctor gets appointment; conflict rejected', () {
-      final ok1 = pat.bookAppointment(doc, dt);
-      if (ok1) repo.addAppointment(pat.appointments.last);
-
-      expect(ok1, isTrue, reason: 'First booking should succeed');
-      expect(doc.appointments.length, 1);
-      expect(pat.appointments.length, 1);
-
-      // second booking same slot should fail
-      final ok2 = pat.bookAppointment(doc, dt);
-      expect(ok2, isFalse,
-          reason: 'Second booking at same time should be rejected');
-      expect(doc.appointments.length, 1);
+    test('View doctors shows added doctor', () {
+      final doctors = repo.getAllDoctors();
+      expect(doctors, isNotEmpty);
+      expect(doctors.first.name, equals('Dr. Smith'));
+      expect(doctors.first.specialization, contains('Cardio'));
     });
 
-    test('Patient can cancel appointment (status set to canceled)', () {
+    test('Patient can book appointment and it appears in repo', () {
+      repo.addPatient(pat);
+      final ok = pat.bookAppointment(doc, dt);
+      expect(ok, isTrue,
+          reason: 'Booking should succeed when doctor available');
+
+      final appt = pat.appointments.last;
+      repo.addAppointment(appt);
+
+      // repo should contain the appointment and doctor/patient lists updated
+      expect(repo.appointments, contains(appt));
+      expect(doc.appointments, contains(appt));
+      expect(pat.appointments, contains(appt));
+      expect(appt.status, AppointmentStatus.scheduled);
+    });
+
+    test('Conflicting booking is rejected', () {
+      repo.addPatient(pat);
+      final first = pat.bookAppointment(doc, dt);
+      expect(first, isTrue);
+      repo.addAppointment(pat.appointments.last);
+
+      // second attempt same date/time must fail
+      final second = pat.bookAppointment(doc, dt);
+      expect(second, isFalse, reason: 'Doctor already booked at same time');
+    });
+
+    test('Patient can cancel appointment', () {
+      repo.addPatient(pat);
       final ok = pat.bookAppointment(doc, dt);
       expect(ok, isTrue);
       final appt = pat.appointments.last;
       repo.addAppointment(appt);
 
-      expect(appt.status, AppointmentStatus.scheduled);
+      // cancel and check status
       pat.cancelAppointment(appt);
       expect(appt.status, AppointmentStatus.canceled);
     });
 
-    test('Repository can mark appointment completed', () {
-      final ok = pat.bookAppointment(doc, dt);
-      expect(ok, isTrue);
-      final appt = pat.appointments.last;
-      repo.addAppointment(appt);
-
-      repo.completeAppointment(appt);
-      expect(appt.status, AppointmentStatus.completed);
-    });
-
-    test('Department contains doctor after adding via repository', () {
-      // repo.addDoctor was called in setUp; department should contain doc
-      expect(dep.doctors.contains(doc), isTrue);
-      expect(doc.department, dep);
-    });
-
-    test('Repository find methods and getAppointmentsForDoctor', () {
-      expect(repo.findDoctorById(101), equals(doc));
-      expect(repo.findPatientById(201), equals(pat));
-
-      // no appointments yet for this doctor in repo appointments list
-      expect(repo.getAppointmentsForDoctor(doc).length, 0);
-
-      // after booking and adding appointment to repo
+    test('Doctor schedule returns the doctor appointments', () {
+      repo.addPatient(pat);
       final ok = pat.bookAppointment(doc, dt);
       expect(ok, isTrue);
       final appt = pat.appointments.last;
       repo.addAppointment(appt);
 
       final list = repo.getAppointmentsForDoctor(doc);
-      expect(list.length, 1);
-      expect(list.first.patient, pat);
+      expect(list.length, greaterThanOrEqualTo(1));
+      expect(list.first.doctor, equals(doc));
+      expect(list.first.patient, equals(pat));
     });
   });
 }

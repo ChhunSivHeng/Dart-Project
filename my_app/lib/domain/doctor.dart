@@ -16,6 +16,7 @@ class Doctor extends Person {
     required this.department,
   }) : super(name: name, id: id, gender: gender, age: age);
 
+  // Doctor.isAvailable(date) checks for scheduled appointments
   bool isAvailable(DateTime date) {
     return !appointments.any(
       (a) => a.date == date && a.status == AppointmentStatus.scheduled,
@@ -23,11 +24,11 @@ class Doctor extends Person {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'gender': gender,
-    'age': age,
-    'specialization': specialization,
-    'departmentId': department.id,
-  };
+        'id': id,
+        'name': name,
+        'gender': gender,
+        'age': age,
+        'specialization': specialization,
+        'departmentId': department.id,
+      };
 }

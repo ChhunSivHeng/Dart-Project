@@ -30,11 +30,12 @@ class Patient extends Person {
   void cancelAppointment(Appointment appointment) {
     appointment.cancel();
   }
+
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'gender': gender,
-    'age': age,
-    'phone': phoneNumber,
-  };
+        'id': id,
+        'name': name,
+        'gender': gender,
+        'age': age,
+        'phone': phoneNumber,
+      };
 }

@@ -53,18 +53,31 @@ class HospitalRepository {
 
   // Patients
   void addPatient(Patient p) {
-    final exist = findPatientByPhone(p.phoneNumber);
-    if (exist == null) {
-      patients.add(p);
+    // If patient has a non-empty phone, use phone as primary key.
+    // Otherwise fallback to id-based lookup to remain compatible with tests/old data.
+    if (p.phoneNumber.isNotEmpty) {
+      final exist = findPatientByPhone(p.phoneNumber);
+      if (exist == null) {
+        patients.add(p);
+      } else {
+        // update existing info
+        exist.name = p.name;
+        exist.gender = p.gender;
+        exist.age = p.age;
+      }
     } else {
-      // update existing info if phone matches
-      exist.name = p.name;
-      exist.gender = p.gender;
-      exist.age = p.age;
+      final existById = findPatientById(p.id);
+      if (existById == null) {
+        patients.add(p);
+      } else {
+        // update existing info by id
+        existById.name = p.name;
+        existById.gender = p.gender;
+        existById.age = p.age;
+      }
     }
   }
 
-  // New: find by phone (primary lookup for patients)
   Patient? findPatientByPhone(String phone) {
     for (var p in patients) {
       if (p.phoneNumber == phone) return p;
@@ -72,7 +85,6 @@ class HospitalRepository {
     return null;
   }
 
-  // Backward-compatible find by id (kept)
   Patient? findPatientById(int id) {
     for (var p in patients) {
       if (p.id == id) return p;
@@ -169,8 +181,7 @@ class HospitalRepository {
       final patientPhone =
           a['patientPhone'] as String? ?? a['patientId']?.toString() ?? '';
       final doctor = docs[doctorId];
-      final patient =
-          patsByPhone[patientPhone] ??
+      final patient = patsByPhone[patientPhone] ??
           (a['patientId'] != null
               ? repo.findPatientById(a['patientId'] as int)
               : null);

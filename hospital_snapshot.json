@@ -1,0 +1,20 @@
+{
+  "departments": [
+    {
+      "id": 1,
+      "name": "Cardiology"
+    }
+  ],
+  "doctors": [
+    {
+      "id": 101,
+      "name": "Dr. Chhun Sivheng",
+      "gender": "M",
+      "age": 20,
+      "specialization": "Adults",
+      "departmentId": 1
+    }
+  ],
+  "patients": [],
+  "appointments": []
+}

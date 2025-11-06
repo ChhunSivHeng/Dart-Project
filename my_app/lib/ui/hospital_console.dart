@@ -92,7 +92,9 @@ void runHospitalConsole(HospitalRepository repo) async {
     print('2. Patient Book Appointment');
     print('3. Doctor View / Confirm Appointment');
     print('4. Complete or Update Appointment Status');
-    print('5. Exit');
+    print('5. Find Patient by Phone');
+    print('6. View All Doctors');
+    print('7. Exit');
     stdout.write('----------------------------------------\nSelect option: ');
     final option = (stdin.readLineSync() ?? '').trim();
 
@@ -220,14 +222,15 @@ void runHospitalConsole(HospitalRepository repo) async {
       print('Date: ${ap.date.toString().split('.').first}');
       print('Status: ${ap.status.name.toUpperCase()}');
     } else if (option == '5') {
+      _findPatientByPhoneUI(repo);
+    } else if (option == '6') {
+      _viewAllDoctors(repo);
+    } else if (option == '7') {
       print(
         'Exiting system...\nThank you for using the Hospital Appointment System!',
       );
       await repo.saveToFile(filePath);
       break;
-    } else if (option == '6') {
-      // call the patient lookup by phone so the helper is referenced
-      _findPatientByPhoneUI(repo);
     } else {
       print('Invalid option.');
     }
@@ -337,3 +340,24 @@ void _patientBookingFlow(HospitalRepository repo) {
     }
   }
 }
+
+// New: list all doctors
+void _viewAllDoctors(HospitalRepository repo) {
+  print('\n--- All Doctors ---');
+  if (repo.doctors.isEmpty) {
+    print('No doctors registered.');
+    return;
+  }
+  for (var d in repo.doctors) {
+    final deptName = d.department.name;
+    print(
+        'ID: ${d.id} | Name: ${d.name} | Specialization: ${d.specialization} | Department: $deptName');
+  }
+}
+
+// Patient registration: _registerPatientUI(repo)
+// Patient booking / view / cancel: _patientBookingFlow(repo)
+// Find patient by phone: _findPatientByPhoneUI(repo)
+// View all doctors: _viewAllDoctors(repo)
+// Doctor change/confirm/complete/update status: handled in option '3' and option '4'
+// No code changes required here.
