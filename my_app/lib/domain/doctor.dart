@@ -1,4 +1,6 @@
-part of hospital;
+import 'person.dart';
+import 'department.dart';
+import 'appointment.dart';
 
 class Doctor extends Person {
   String specialization;
@@ -19,4 +21,13 @@ class Doctor extends Person {
       (a) => a.date == date && a.status == AppointmentStatus.scheduled,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'gender': gender,
+    'age': age,
+    'specialization': specialization,
+    'departmentId': department.id,
+  };
 }

@@ -1,5 +1,3 @@
-part of hospital;
-
 class Person {
   String name;
   int id;
