@@ -63,20 +63,6 @@ void _registerPatientUI(HospitalRepository repo) {
   print(' Patient registered: ${patient.name} (Phone: ${patient.phoneNumber})');
 }
 
-void _findPatientByPhoneUI(HospitalRepository repo) {
-  stdout.write('Enter patient phone number: ');
-  final phone = (stdin.readLineSync() ?? '').trim();
-  if (phone.isEmpty) return;
-  final p = repo.findPatientByPhone(phone);
-  if (p == null) {
-    print('Patient not found.');
-    return;
-  }
-  print(
-    'Found: ${p.name}, Age: ${p.age}, Gender: ${p.gender}, Phone: ${p.phoneNumber}',
-  );
-}
-
 void runHospitalConsole(HospitalRepository repo) async {
   const filePath = 'hospital_snapshot.json';
 
@@ -92,7 +78,7 @@ void runHospitalConsole(HospitalRepository repo) async {
     print('2. Patient Book Appointment');
     print('3. Doctor View / Confirm Appointment');
     print('4. Complete or Update Appointment Status');
-    print('5. Find Patient by Phone');
+    print('5. View All Patients'); // changed from "Find Patient by Phone"
     print('6. View All Doctors');
     print('7. Exit');
     stdout.write('----------------------------------------\nSelect option: ');
@@ -222,7 +208,7 @@ void runHospitalConsole(HospitalRepository repo) async {
       print('Date: ${ap.date.toString().split('.').first}');
       print('Status: ${ap.status.name.toUpperCase()}');
     } else if (option == '5') {
-      _findPatientByPhoneUI(repo);
+      _viewAllPatients(repo);
     } else if (option == '6') {
       _viewAllDoctors(repo);
     } else if (option == '7') {
@@ -355,9 +341,15 @@ void _viewAllDoctors(HospitalRepository repo) {
   }
 }
 
-// Patient registration: _registerPatientUI(repo)
-// Patient booking / view / cancel: _patientBookingFlow(repo)
-// Find patient by phone: _findPatientByPhoneUI(repo)
-// View all doctors: _viewAllDoctors(repo)
-// Doctor change/confirm/complete/update status: handled in option '3' and option '4'
-// No code changes required here.
+// New helper: list all patients
+void _viewAllPatients(HospitalRepository repo) {
+  print('\n--- All Patients ---');
+  if (repo.patients.isEmpty) {
+    print('No patients registered.');
+    return;
+  }
+  for (var p in repo.patients) {
+    print(
+        'ID: ${p.id} | Name: ${p.name} | Phone: ${p.phoneNumber} | Age: ${p.age} | Gender: ${p.gender}');
+  }
+}

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:test/test.dart';
 import 'package:my_app/data/hospital_repository.dart';
 import 'package:my_app/domain/department.dart';
@@ -6,7 +7,7 @@ import 'package:my_app/domain/patient.dart';
 import 'package:my_app/domain/appointment.dart';
 
 void main() {
-  group('Simple Hospital tests', () {
+  group('Hospital unit tests', () {
     late HospitalRepository repo;
     late Department dep;
     late Doctor doc;
@@ -22,64 +23,110 @@ void main() {
         name: 'Dr. Heng',
         id: 101,
         gender: 'M',
-        age: 15,
+        age: 40,
         specialization: 'Cardiologist',
         department: dep,
       );
       repo.addDoctor(doc);
 
       pat = Patient(name: 'Nak', id: 201, gender: 'F', age: 21);
-      // tests will register patient into repo where needed
       dt = DateTime(2025, 11, 6, 10, 0);
     });
 
-    test('View doctors shows added doctor', () {
-      final doctors = repo.getAllDoctors();
-      expect(doctors, isNotEmpty);
-      expect(doctors.first.name, equals('Dr. Smith'));
-      expect(doctors.first.specialization, contains('Cardio'));
+    test('Department contains doctor after addDoctor', () {
+      expect(repo.departmentCount, greaterThanOrEqualTo(1));
+      expect(dep.doctors.contains(doc), isTrue);
+      expect(doc.department, equals(dep));
     });
 
-    test('Patient can book appointment and it appears in repo', () {
+    test('Register patient and find by phone and id', () {
+      // register patient with phone
+      pat.phoneNumber = '012345678';
       repo.addPatient(pat);
+
+      final byPhone = repo.findPatientByPhone('012345678');
+      expect(byPhone, isNotNull);
+      expect(byPhone!.name, equals(pat.name));
+
+      final byId = repo.findPatientById(pat.id);
+      expect(byId, isNotNull);
+      expect(byId!.id, equals(pat.id));
+    });
+
+    test('Patient can book appointment and repository records it', () {
+      repo.addPatient(pat);
+
       final ok = pat.bookAppointment(doc, dt);
-      expect(ok, isTrue,
-          reason: 'Booking should succeed when doctor available');
+      expect(ok, isTrue);
 
       final appt = pat.appointments.last;
       repo.addAppointment(appt);
 
-      // repo should contain the appointment and doctor/patient lists updated
       expect(repo.appointments, contains(appt));
       expect(doc.appointments, contains(appt));
       expect(pat.appointments, contains(appt));
       expect(appt.status, AppointmentStatus.scheduled);
     });
 
-    test('Conflicting booking is rejected', () {
+    test('Doctor rejects conflicting bookings at same datetime', () {
       repo.addPatient(pat);
-      final first = pat.bookAppointment(doc, dt);
-      expect(first, isTrue);
+
+      final ok1 = pat.bookAppointment(doc, dt);
+      expect(ok1, isTrue);
       repo.addAppointment(pat.appointments.last);
 
-      // second attempt same date/time must fail
-      final second = pat.bookAppointment(doc, dt);
-      expect(second, isFalse, reason: 'Doctor already booked at same time');
+      final ok2 = pat.bookAppointment(doc, dt);
+      expect(ok2, isFalse,
+          reason: 'Second booking at same datetime should be rejected');
     });
 
-    test('Patient can cancel appointment', () {
+    test('Patient can book multiple different appointments', () {
+      repo.addPatient(pat);
+
+      final dt2 = dt.add(const Duration(hours: 1));
+      final ok1 = pat.bookAppointment(doc, dt);
+      final ok2 = pat.bookAppointment(doc, dt2);
+
+      expect(ok1, isTrue);
+      expect(ok2, isTrue);
+
+      // add to repo
+      repo.addAppointment(pat.appointments[0]);
+      repo.addAppointment(pat.appointments[1]);
+
+      expect(doc.appointments.length, greaterThanOrEqualTo(2));
+    });
+
+    test('Patient can cancel appointment (status changes)', () {
+      repo.addPatient(pat);
+
+      final ok = pat.bookAppointment(doc, dt);
+      expect(ok, isTrue);
+      final appt = pat.appointments.last;
+      repo.addAppointment(appt);
+
+      // cancel via patient
+      pat.cancelAppointment(appt);
+      expect(appt.status, AppointmentStatus.canceled);
+    });
+
+    test('Repository confirm and complete appointment', () {
       repo.addPatient(pat);
       final ok = pat.bookAppointment(doc, dt);
       expect(ok, isTrue);
       final appt = pat.appointments.last;
       repo.addAppointment(appt);
 
-      // cancel and check status
-      pat.cancelAppointment(appt);
-      expect(appt.status, AppointmentStatus.canceled);
+      // confirm -> pending
+      repo.confirmAppointment(appt);
+      expect(appt.status, AppointmentStatus.pending);
+
+      // complete -> completed
+      repo.completeAppointment(appt);
+      expect(appt.status, AppointmentStatus.completed);
     });
 
-    test('Doctor schedule returns the doctor appointments', () {
+    test('Get appointments for doctor returns expected items', () {
       repo.addPatient(pat);
       final ok = pat.bookAppointment(doc, dt);
       expect(ok, isTrue);
@@ -87,9 +134,35 @@ void main() {
       repo.addAppointment(appt);
 
       final list = repo.getAppointmentsForDoctor(doc);
-      expect(list.length, greaterThanOrEqualTo(1));
+      expect(list, isNotEmpty);
       expect(list.first.doctor, equals(doc));
       expect(list.first.patient, equals(pat));
+    });
+
+    test('Repository JSON serialization and file persistence', () async {
+      // prepare repo with data
+      pat.phoneNumber = '099999999';
+      repo.addPatient(pat);
+      final ok = pat.bookAppointment(doc, dt);
+      expect(ok, isTrue);
+      final appt = pat.appointments.last;
+      repo.addAppointment(appt);
+
+      // save to a temp file and load back
+      final tmpDir = Directory.systemTemp.createTempSync('hospital_test_');
+      final filePath = '${tmpDir.path}/snapshot.json';
+
+      await repo.saveToFile(filePath);
+      final loaded = await HospitalRepository.loadFromFile(filePath);
+
+      // basic assertions on loaded data
+      expect(loaded.departmentCount, equals(repo.departmentCount));
+      expect(loaded.doctorCount, equals(repo.doctorCount));
+      expect(loaded.patientCount, equals(repo.patientCount));
+      expect(loaded.appointmentCount, equals(repo.appointmentCount));
+
+      // cleanup
+      tmpDir.deleteSync(recursive: true);
     });
   });
 }
