@@ -7,7 +7,6 @@ Future<void> main() async {
   const snapshot = 'hospital_snapshot.json';
   final repo = await HospitalRepository.loadFromFile(snapshot);
 
-  // Bootstraps Department + Doctor if repo empty, then runHospitalConsole(repo)
   if (repo.doctorCount == 0 &&
       repo.patientCount == 0 &&
       repo.departmentCount == 0) {

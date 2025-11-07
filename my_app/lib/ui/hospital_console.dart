@@ -49,7 +49,6 @@ void _registerPatientUI(HospitalRepository repo) {
   stdout.write('Phone number: ');
   final phone = (stdin.readLineSync() ?? '').trim();
 
-  // generate an internal numeric id if needed
   final id = repo.patients.length + 1;
 
   final patient = Patient(
@@ -66,7 +65,7 @@ void _registerPatientUI(HospitalRepository repo) {
 void runHospitalConsole(HospitalRepository repo) async {
   const filePath = 'hospital_snapshot.json';
 
-  // Ensure at least one department exists
+
   if (repo.departments.isEmpty) {
     final defaultDept = Department(id: 1, name: 'General');
     repo.addDepartment(defaultDept);
@@ -224,9 +223,9 @@ void runHospitalConsole(HospitalRepository repo) async {
   }
 }
 
-// New: patient booking & status flow
+
 void _patientBookingFlow(HospitalRepository repo) {
-  // identify patient by phone
+
   stdout.write('Enter patient phone number: ');
   var phone = (stdin.readLineSync() ?? '').trim();
   Patient? patient = repo.findPatientByPhone(phone);
@@ -236,7 +235,6 @@ void _patientBookingFlow(HospitalRepository repo) {
     final create = (stdin.readLineSync() ?? '').trim().toUpperCase();
     if (create == 'Y') {
       _registerPatientUI(repo);
-      // ask phone again to locate the created patient
       stdout.write('Enter patient phone number you just registered: ');
       phone = (stdin.readLineSync() ?? '').trim();
       patient = repo.findPatientByPhone(phone);
@@ -327,7 +325,7 @@ void _patientBookingFlow(HospitalRepository repo) {
   }
 }
 
-// New: list all doctors
+
 void _viewAllDoctors(HospitalRepository repo) {
   print('\n--- All Doctors ---');
   if (repo.doctors.isEmpty) {
@@ -341,7 +339,7 @@ void _viewAllDoctors(HospitalRepository repo) {
   }
 }
 
-// New helper: list all patients
+
 void _viewAllPatients(HospitalRepository repo) {
   print('\n--- All Patients ---');
   if (repo.patients.isEmpty) {

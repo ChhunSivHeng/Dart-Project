@@ -16,12 +16,31 @@ class Doctor extends Person {
     required this.department,
   }) : super(name: name, id: id, gender: gender, age: age);
 
-  // Doctor.isAvailable(date) checks for scheduled appointments
   bool isAvailable(DateTime date) {
     return !appointments.any(
       (a) => a.date == date && a.status == AppointmentStatus.scheduled,
     );
   }
+
+  void confirmAppointment(Appointment appt) {
+    if (appointments.contains(appt)) {
+      appt.status = AppointmentStatus.pending;
+    }
+  }
+
+  void completeAppointment(Appointment appt) {
+    if (appointments.contains(appt)) {
+      appt.complete();
+    }
+  }
+
+  void cancelAppointment(Appointment appt) {
+    if (appointments.contains(appt)) {
+      appt.cancel();
+    }
+  }
+
+  List<Appointment> viewAppointments() => List.unmodifiable(appointments);
 
   Map<String, dynamic> toJson() => {
         'id': id,
