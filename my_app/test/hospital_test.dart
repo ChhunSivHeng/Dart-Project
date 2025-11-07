@@ -5,7 +5,7 @@ import 'package:my_app/domain/patient.dart';
 import 'package:my_app/domain/appointment.dart';
 
 void main() {
-  group('Domain-only Hospital tests (no repository)', () {
+  group('Hospital tests', () {
     late Department dept;
     late Doctor doctor;
     late Patient patient;
@@ -24,7 +24,8 @@ void main() {
       );
 
       dept.addDoctor(doctor);
-      patient = Patient(name: 'Bunna', id: 201, gender: 'M', age: 21);
+      patient = Patient(name: 'Bunna', id: 201, gender: 'M', age: 21)
+        ..phoneNumber = '077777777';
     });
 
     test('Department contains doctor after addDoctor', () {
@@ -59,6 +60,16 @@ void main() {
       expect(appt.status, AppointmentStatus.pending);
       doctor.completeAppointment(appt);
       expect(appt.status, AppointmentStatus.completed);
+    });
+
+    test('View patient details and appointments', () {
+      final ok = patient.bookAppointment(doctor, slot);
+      expect(ok, isTrue);
+      expect(patient.name, equals('Bunna'));
+      expect(patient.id, equals(201));
+      expect(patient.phoneNumber, equals('077777777'));
+      expect(patient.age, equals(21));
+      expect(patient.gender, equals('M'));
     });
   });
 }
