@@ -12,9 +12,8 @@ class HospitalRepository {
   final List<Patient> patients = [];
   final List<Appointment> appointments = [];
 
-  // Departments
   void addDepartment(Department d) {
-    // replace existing by id or add
+
     final exist = findDepartmentById(d.id);
     if (exist == null) {
       departments.add(d);
@@ -32,7 +31,6 @@ class HospitalRepository {
 
   List<Department> getAllDepartments() => departments;
 
-  // Doctors
   void addDoctor(Doctor d) {
     doctors.add(d);
     if (!d.department.doctors.contains(d)) {
@@ -51,16 +49,13 @@ class HospitalRepository {
   List<Doctor> getDoctorsByDepartmentId(int deptId) =>
       doctors.where((doc) => doc.department.id == deptId).toList();
 
-  // Patients
   void addPatient(Patient p) {
-    // If patient has a non-empty phone, use phone as primary key.
-    // Otherwise fallback to id-based lookup to remain compatible with tests/old data.
+
     if (p.phoneNumber.isNotEmpty) {
       final exist = findPatientByPhone(p.phoneNumber);
       if (exist == null) {
         patients.add(p);
       } else {
-        // update existing info
         exist.name = p.name;
         exist.gender = p.gender;
         exist.age = p.age;
@@ -70,7 +65,6 @@ class HospitalRepository {
       if (existById == null) {
         patients.add(p);
       } else {
-        // update existing info by id
         existById.name = p.name;
         existById.gender = p.gender;
         existById.age = p.age;
@@ -94,7 +88,6 @@ class HospitalRepository {
 
   List<Patient> getAllPatients() => patients;
 
-  // Appointments
   void addAppointment(Appointment a) {
     appointments.add(a);
   }
@@ -114,7 +107,6 @@ class HospitalRepository {
     a.cancel();
   }
 
-  // JSON serialization
   Map<String, dynamic> toJson() {
     return {
       'departments': departments.map((d) => d.toJson()).toList(),
@@ -127,7 +119,6 @@ class HospitalRepository {
   static HospitalRepository fromJson(Map<String, dynamic> json) {
     final repo = HospitalRepository();
 
-    // departments
     final deps = <int, Department>{};
     for (var d in (json['departments'] as List<dynamic>? ?? [])) {
       final dep = Department(id: d['id'] as int, name: d['name'] as String);
@@ -135,7 +126,6 @@ class HospitalRepository {
       deps[dep.id] = dep;
     }
 
-    // doctors
     final docs = <int, Doctor>{};
     for (var d in (json['doctors'] as List<dynamic>? ?? [])) {
       final deptId = d['departmentId'] as int;
@@ -152,7 +142,6 @@ class HospitalRepository {
       docs[doc.id] = doc;
     }
 
-    // patients (keyed by phone)
     final patsByPhone = <String, Patient>{};
     for (var p in (json['patients'] as List<dynamic>? ?? [])) {
       final phone = (p['phone'] as String?) ?? '';
@@ -167,7 +156,6 @@ class HospitalRepository {
       if (phone.isNotEmpty) patsByPhone[phone] = pat;
     }
 
-    // appointments (match by doctor id and patient phone)
     int maxId = 0;
     for (var a in (json['appointments'] as List<dynamic>? ?? [])) {
       final id = a['id'] as int;
@@ -205,7 +193,6 @@ class HospitalRepository {
     return repo;
   }
 
-  // file I/O helpers
   Future<void> saveToFile(String path) async {
     final file = File(path);
     await file.writeAsString(JsonEncoder.withIndent('  ').convert(toJson()));
@@ -220,7 +207,6 @@ class HospitalRepository {
     return HospitalRepository.fromJson(data);
   }
 
-  // Counts
   int get departmentCount => departments.length;
   int get doctorCount => doctors.length;
   int get patientCount => patients.length;

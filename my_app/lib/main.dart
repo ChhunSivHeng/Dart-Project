@@ -4,7 +4,7 @@ import 'domain/doctor.dart';
 import 'ui/hospital_console.dart';
 
 Future<void> main() async {
-  const snapshot = 'hospital_snapshot.json';
+  const snapshot = 'hospital_data.json';
   final repo = await HospitalRepository.loadFromFile(snapshot);
 
   if (repo.doctorCount == 0 &&
@@ -14,11 +14,11 @@ Future<void> main() async {
     repo.addDepartment(cardiology);
 
     final drHeng = Doctor(
-      name: 'Dr. Chhun Sivheng',
+      name: 'Dr. Ronan',
       id: 101,
       gender: 'M',
-      age: 20,
-      specialization: 'Adults',
+      age: 30,
+      specialization: 'Adults Heart Surgeon',
       department: cardiology,
     );
     repo.addDoctor(drHeng);

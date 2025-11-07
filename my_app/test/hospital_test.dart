@@ -52,7 +52,7 @@ void main() {
       expect(appt.status, AppointmentStatus.canceled);
     });
 
-    test('Doctor can confirm and complete appointment', () {
+    test('Doctor can confirm and complete', () {
       final ok = patient.bookAppointment(doctor, slot);
       expect(ok, isTrue);
       final appt = patient.appointments.last;
@@ -62,7 +62,7 @@ void main() {
       expect(appt.status, AppointmentStatus.completed);
     });
 
-    test('View patient details and appointments', () {
+    test('View patient details', () {
       final ok = patient.bookAppointment(doctor, slot);
       expect(ok, isTrue);
       expect(patient.name, equals('Bunna'));
@@ -71,5 +71,10 @@ void main() {
       expect(patient.age, equals(21));
       expect(patient.gender, equals('M'));
     });
+    test('view doctor details', () {
+      expect(doctor.name, equals('Dr. Ronan'));
+      expect(doctor.id, equals(101));
+      expect(doctor.age, equals(30));
   });
+});
 }
