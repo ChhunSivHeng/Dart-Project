@@ -31,9 +31,9 @@ DateTime _readDatePrompt(String prompt) {
     final input = stdin.readLineSync() ?? '';
     final parsed = _parseFlexibleDate(input);
     if (parsed != null) return parsed;
-    print('Invalid date format.');
+    print('The date is taken.');
     print(
-      'Accepted formats: "YYYY-MM-DD HH:MM" (e.g. 2025-11-05 12:34) or "MM/DD/YY" (e.g. 11/05/25). Please re-enter.',
+      'Accepted formats: "YYYY-MM-DD HH:MM" (e.g. 2025-11-05 12:34)',
     );
   }
 }
@@ -64,7 +64,6 @@ void _registerPatientUI(HospitalRepository repo) {
 
 void runHospitalConsole(HospitalRepository repo) async {
   const filePath = 'hospital_snapshot.json';
-
 
   if (repo.departments.isEmpty) {
     final defaultDept = Department(id: 1, name: 'General');
@@ -223,9 +222,7 @@ void runHospitalConsole(HospitalRepository repo) async {
   }
 }
 
-
 void _patientBookingFlow(HospitalRepository repo) {
-
   stdout.write('Enter patient phone number: ');
   var phone = (stdin.readLineSync() ?? '').trim();
   Patient? patient = repo.findPatientByPhone(phone);
@@ -325,7 +322,6 @@ void _patientBookingFlow(HospitalRepository repo) {
   }
 }
 
-
 void _viewAllDoctors(HospitalRepository repo) {
   print('\n--- All Doctors ---');
   if (repo.doctors.isEmpty) {
@@ -338,7 +334,6 @@ void _viewAllDoctors(HospitalRepository repo) {
         'ID: ${d.id} | Name: ${d.name} | Specialization: ${d.specialization} | Department: $deptName');
   }
 }
-
 
 void _viewAllPatients(HospitalRepository repo) {
   print('\n--- All Patients ---');
